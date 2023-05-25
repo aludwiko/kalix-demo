@@ -64,3 +64,19 @@ curl -XPATCH localhost:9000/wallet/w1/withdraw/20
 ```shell
 curl localhost:9000/wallet/w1 
 ```
+
+- Delete wallet
+
+```shell
+curl -XDELETE localhost:9000/wallet/w1 
+```
+
+- Find with balance below 200
+
+```shell
+curl localhost:9000/wallet/by-balance-below/200 
+```
+
+```shell
+curl localhost:9000/wallet/by-owner/o1 
+```

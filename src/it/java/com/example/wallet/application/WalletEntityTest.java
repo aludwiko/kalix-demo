@@ -5,19 +5,16 @@ import kalix.spring.testkit.KalixIntegrationTestKitSupport;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.annotation.DirtiesContext;
 
-import java.time.Duration;
-
-import static java.time.temporal.ChronoUnit.SECONDS;
 import static org.assertj.core.api.Assertions.assertThat;
 
+@DirtiesContext
 @SpringBootTest
 class WalletEntityTest extends KalixIntegrationTestKitSupport {
 
   @Autowired
   private WalletRequests walletRequests;
-
-  private Duration timeout = Duration.of(10, SECONDS);
 
   @Test
   public void shouldCreateWallet() {

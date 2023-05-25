@@ -1,11 +1,14 @@
 package com.example.wallet.application;
 
 import com.example.wallet.domain.Wallet;
+import com.example.wallet.domain.WalletWithOwner;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
 
 import java.time.Duration;
+import java.util.List;
+import java.util.UUID;
 
 import static java.time.temporal.ChronoUnit.SECONDS;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -58,5 +61,37 @@ public class WalletRequests {
       .retrieve()
       .bodyToMono(Wallet.class)
       .block(timeout);
+  }
+
+  public static String randomWalletId() {
+    return randomString();
+  }
+
+  public static String randomOwnerId() {
+    return randomString();
+  }
+
+  private static String randomString() {
+    return UUID.randomUUID().toString().substring(8);
+  }
+
+  public List<Wallet> findByBalanceBelow(int balance) {
+    return webClient
+      .get()
+      .uri("/wallet/by-balance-below/" + balance)
+      .retrieve()
+      .bodyToFlux(Wallet.class)
+      .toStream()
+      .toList();
+  }
+
+  public List<WalletWithOwner> findByOwnerId(String ownerId) {
+    return webClient
+      .get()
+      .uri("/wallet/by-owner/" + ownerId)
+      .retrieve()
+      .bodyToFlux(WalletWithOwner.class)
+      .toStream()
+      .toList();
   }
 }
