@@ -77,6 +77,8 @@ curl -XDELETE localhost:9000/wallet/w1
 curl localhost:9000/wallet/by-balance-below/200 
 ```
 
+- Find with by owner
+
 ```shell
 curl localhost:9000/wallet/by-owner/o1 
 ```

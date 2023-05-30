@@ -1,6 +1,7 @@
 package com.example.wallet.application;
 
-import com.example.wallet.domain.Wallet;
+import com.example.wallet.domain.WalletEvent.WalletCreated;
+import com.example.wallet.domain.WalletEvent.WalletDeleted;
 import com.example.wallet.domain.WalletWithOwner;
 import kalix.javasdk.annotations.Query;
 import kalix.javasdk.annotations.Subscribe;
@@ -13,6 +14,7 @@ import reactor.core.publisher.Flux;
 
 @ViewId("wallet_by_owner")
 @Table("wallet_by_owner")
+@Subscribe.EventSourcedEntity(value = WalletEntity.class, ignoreUnknown = true)
 public class WalletByOwner extends View<WalletWithOwner> {
 
   @GetMapping("/wallet/by-owner/{ownerId}")
@@ -21,13 +23,11 @@ public class WalletByOwner extends View<WalletWithOwner> {
     return null;
   }
 
-  @Subscribe.ValueEntity(WalletEntity.class)
-  public UpdateEffect<WalletWithOwner> onUpdate(Wallet wallet) {
-    return effects().updateState(new WalletWithOwner(wallet.id(), wallet.ownerId()));
+  public UpdateEffect<WalletWithOwner> handle(WalletCreated walletCreated) {
+    return effects().updateState(new WalletWithOwner(walletCreated.walletId(), walletCreated.ownerId()));
   }
 
-  @Subscribe.ValueEntity(value = WalletEntity.class, handleDeletes = true)
-  public UpdateEffect<WalletWithOwner> onDelete() {
+  public UpdateEffect<WalletWithOwner> handle(WalletDeleted __) {
     return effects().deleteState();
   }
 }

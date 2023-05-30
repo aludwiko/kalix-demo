@@ -1,6 +1,7 @@
 package com.example.wallet.application;
 
 import com.example.wallet.domain.Wallet;
+import com.example.wallet.domain.WalletWithBalance;
 import com.example.wallet.domain.WalletWithOwner;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -75,12 +76,12 @@ public class WalletRequests {
     return UUID.randomUUID().toString().substring(8);
   }
 
-  public List<Wallet> findByBalanceBelow(int balance) {
+  public List<WalletWithBalance> findByBalanceBelow(int balance) {
     return webClient
       .get()
       .uri("/wallet/by-balance-below/" + balance)
       .retrieve()
-      .bodyToFlux(Wallet.class)
+      .bodyToFlux(WalletWithBalance.class)
       .toStream()
       .toList();
   }

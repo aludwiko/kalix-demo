@@ -1,6 +1,6 @@
 package com.example.wallet.application;
 
-import com.example.wallet.domain.Wallet;
+import com.example.wallet.domain.WalletWithBalance;
 import com.example.wallet.domain.WalletWithOwner;
 import kalix.spring.testkit.KalixIntegrationTestKitSupport;
 import org.junit.jupiter.api.Test;
@@ -37,10 +37,10 @@ class WalletViewsTest extends KalixIntegrationTestKitSupport {
       .atMost(10, TimeUnit.of(SECONDS))
       .untilAsserted(() -> {
         //when
-        List<Wallet> result = walletRequests.findByBalanceBelow(150);
+        List<WalletWithBalance> result = walletRequests.findByBalanceBelow(150);
 
         //then
-        assertThat(result).containsOnly(new Wallet(walletId1, ownerId, 100));
+        assertThat(result).containsOnly(new WalletWithBalance(walletId1, 100));
       });
   }
 
