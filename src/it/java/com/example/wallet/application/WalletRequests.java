@@ -1,6 +1,5 @@
 package com.example.wallet.application;
 
-import com.example.wallet.domain.Wallet;
 import com.example.wallet.domain.WalletWithBalance;
 import com.example.wallet.domain.WalletWithOwner;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -55,12 +54,23 @@ public class WalletRequests {
     assertThat(response.message()).isEqualTo("ok");
   }
 
-  public Wallet getWallet(String walletId) {
+  public void transferFunds(String fromWalletId, String toWalletId, int amount) {
+    Response.Success response = webClient
+      .patch()
+      .uri("/wallet/" + fromWalletId + "/transfer/" + toWalletId + "/" + amount)
+      .retrieve()
+      .bodyToMono(Response.Success.class)
+      .block(timeout);
+
+    assertThat(response.message()).isEqualTo("ok");
+  }
+
+  public WalletResponse getWallet(String walletId) {
     return webClient
       .get()
       .uri("/wallet/" + walletId)
       .retrieve()
-      .bodyToMono(Wallet.class)
+      .bodyToMono(WalletResponse.class)
       .block(timeout);
   }
 

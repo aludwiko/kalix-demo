@@ -2,6 +2,9 @@ package com.example.wallet.application;
 
 import com.example.wallet.domain.WalletEvent.FundsDeposited;
 import com.example.wallet.domain.WalletEvent.FundsWithdrawn;
+import com.example.wallet.domain.WalletEvent.TransferFundsDeposited;
+import com.example.wallet.domain.WalletEvent.TransferFundsLocked;
+import com.example.wallet.domain.WalletEvent.TransferFundsUnlocked;
 import com.example.wallet.domain.WalletEvent.WalletCreated;
 import com.example.wallet.domain.WalletEvent.WalletDeleted;
 import com.example.wallet.domain.WalletWithBalance;
@@ -16,7 +19,7 @@ import reactor.core.publisher.Flux;
 
 @ViewId("wallet_by_balance")
 @Table("wallet_by_balance")
-@Subscribe.EventSourcedEntity(WalletEntity.class)
+@Subscribe.EventSourcedEntity(value = WalletEntity.class, ignoreUnknown = true)
 public class WalletByBalance extends View<WalletWithBalance> {
 
   @GetMapping("/wallet/by-balance-below/{balance}")
@@ -37,6 +40,21 @@ public class WalletByBalance extends View<WalletWithBalance> {
 
   public UpdateEffect<WalletWithBalance> handle(FundsWithdrawn fundsWithdrawn) {
     WalletWithBalance newState = new WalletWithBalance(fundsWithdrawn.walletId(), fundsWithdrawn.balanceAfter());
+    return effects().updateState(newState);
+  }
+
+  public UpdateEffect<WalletWithBalance> handle(TransferFundsLocked fundsWithdrawn) {
+    WalletWithBalance newState = new WalletWithBalance(fundsWithdrawn.walletId(), fundsWithdrawn.balanceAfter());
+    return effects().updateState(newState);
+  }
+
+  public UpdateEffect<WalletWithBalance> handle(TransferFundsDeposited transferFundsDeposited) {
+    WalletWithBalance newState = new WalletWithBalance(transferFundsDeposited.walletId(), transferFundsDeposited.balanceAfter());
+    return effects().updateState(newState);
+  }
+
+  public UpdateEffect<WalletWithBalance> handle(TransferFundsUnlocked transferFundsUnlocked) {
+    WalletWithBalance newState = new WalletWithBalance(transferFundsUnlocked.walletId(), transferFundsUnlocked.balanceAfter());
     return effects().updateState(newState);
   }
 
