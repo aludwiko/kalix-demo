@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 
 import static com.example.wallet.domain.TransferStatus.STARTED;
+import static kalix.javasdk.workflowentity.WorkflowEntity.RecoverStrategy.maxRetries;
 
 @EntityKey("id")
 @EntityType("transfer")
@@ -26,6 +27,7 @@ public class TransferWorkflow extends WorkflowEntity<TransferState> {
 
   private final String withdrawStepName = "withdraw";
   private final String depositStepName = "deposit";
+  private final String abortStepName = "abort";
 
   final private KalixClient kalixClient;
 
@@ -52,9 +54,19 @@ public class TransferWorkflow extends WorkflowEntity<TransferState> {
         })
         .andThen(Success.class, this::completeTransfer);
 
+    var abort =
+      step(abortStepName)
+        .call(String.class, message -> {
+          TransferState transferState = currentState();
+          logger.info("compensating withdraw from walletId=" + transferState.fromWalletId());
+          return kalixClient.patch("/wallet/" + transferState.fromWalletId() + "/deposit/" + transferState.amount(), Response.class);
+        })
+        .andThen(Response.class, r -> effects().updateState(currentState().asAborted()).end());
+
     return workflow()
       .addStep(withdraw)
-      .addStep(deposit);
+      .addStep(deposit, maxRetries(3).failoverTo(abortStepName))
+      .addStep(abort);
   }
 
   @PostMapping("/{from}/{to}/{amount}")
