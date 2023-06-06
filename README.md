@@ -1,4 +1,4 @@
-# Kalix Order Saga
+# Kalix Demo Application
 
 ## Designing
 
@@ -35,50 +35,82 @@ This command will start your Kalix application and a Kalix Proxy using the inclu
 
 ## Exercising the service
 
+- Export app url
+
+```shell
+#export KALIX_DEMO_URL=https://sparkling-butterfly-3388.us-east1.kalix.app
+#export KALIX_DEMO_URL=https://holy-dawn-5129.us-east1.kalix.app
+export KALIX_DEMO_URL=localhost:9000
+```
+
 - Create wallet
 
 ```shell
-curl -XPOST localhost:9000/wallet/w1/o1/100 
+curl -XPOST $KALIX_DEMO_URL/wallet/w1/o1/100 
 ```
 
 - Create wallet public api
 
 ```shell
-curl -XPOST localhost:9000/public/wallet/w2/o2/100 
+curl -XPOST $KALIX_DEMO_URL/public/wallet/w2/o2/100 
 ```
 
 - Deposit funds
 
 ```shell
-curl -XPATCH localhost:9000/wallet/w1/deposit/50 
+curl -XPATCH $KALIX_DEMO_URL/wallet/w1/deposit/50 
 ```
 
 - Withdraw funds
 
 ```shell
-curl -XPATCH localhost:9000/wallet/w1/withdraw/20 
+curl -XPATCH $KALIX_DEMO_URL/wallet/w1/withdraw/20 
 ```
 
 - Get wallet
 
 ```shell
-curl localhost:9000/wallet/w1 
+curl $KALIX_DEMO_URL/wallet/w1 
 ```
 
 - Delete wallet
 
 ```shell
-curl -XDELETE localhost:9000/wallet/w1 
+curl -XDELETE $KALIX_DEMO_URL/wallet/w1 
 ```
 
 - Find with balance below 200
 
 ```shell
-curl localhost:9000/wallet/by-balance-below/200 
+curl $KALIX_DEMO_URL/wallet/by-balance-below/200 
 ```
 
 - Find with by owner
 
 ```shell
-curl localhost:9000/wallet/by-owner/o1 
+curl $KALIX_DEMO_URL/wallet/by-owner/o1 
 ```
+
+- Transfer funds - choreography
+
+```shell
+curl -XPATCH $KALIX_DEMO_URL/wallet/w1/transfer/w2/20 
+```
+
+- Transfer funds - orchestration (Workflow Entity)
+
+```shell
+curl -XPOST $KALIX_DEMO_URL/transfer/t1/w1/w2/20 
+```
+
+- Get transfer state
+
+```shell
+curl  $KALIX_DEMO_URL/transfer/t1
+```
+
+## Deploying the service
+
+Follow the quickstart [tutorial](https://docs.kalix.io/java/quickstart/sc-eventsourced-entity-java.html#_package_and_deploy_your_service) or
+operating [documentation](https://docs.kalix.io/operations/deploy-service.html#_deploy).
+

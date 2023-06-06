@@ -5,7 +5,7 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>3.0.4</version>
+        <version>3.1.0</version>
         <relativePath/>
     </parent>
 
@@ -18,7 +18,7 @@
     <properties>
 
         <!-- TODO Update to your own Docker repository or Docker Hub scope -->
-        <dockerImage>my-docker-repo/${project.artifactId}</dockerImage>
+        <dockerImage>aludwiko/${project.artifactId}</dockerImage>
         <dockerTag>${project.version}-${build.timestamp}</dockerTag>
         <maven.build.timestamp.format>yyyyMMddHHmmss</maven.build.timestamp.format>
         <mainClass>com.example.Main</mainClass>
@@ -31,10 +31,6 @@
 
     <build>
         <resources>
-            <!-- Add the generated protobuf descriptor to the classpath, so that source mapping works -->
-            <resource>
-                <directory>${project.build.directory}/generated-resources</directory>
-            </resource>
             <resource>
                 <directory>src/main/resources</directory>
             </resource>
@@ -116,6 +112,7 @@
                                 </assembly>
                                 <entryPoint>
                                     <arg>java</arg>
+                                    <arg>--enable-preview</arg>
                                     <arg>-jar</arg>
                                     <arg>/maven/${project.build.finalName}.jar</arg>
                                 </entryPoint>
@@ -188,13 +185,17 @@
             </plugin>
 
             <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+
+            <plugin>
                 <groupId>io.kalix</groupId>
                 <artifactId>kalix-maven-plugin</artifactId>
                 <version>${kalix-sdk.version}</version>
                 <executions>
                     <execution>
                         <goals>
-                            <goal>generate</goal>
                             <goal>deploy</goal>
                         </goals>
                     </execution>
@@ -208,7 +209,6 @@
                     <integrationTestSourceDirectory>src/it/java</integrationTestSourceDirectory>
                 </configuration>
             </plugin>
-
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-deploy-plugin</artifactId>
@@ -274,11 +274,6 @@
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter-api</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.junit.jupiter</groupId>
-            <artifactId>junit-jupiter</artifactId>
             <scope>test</scope>
         </dependency>
 
