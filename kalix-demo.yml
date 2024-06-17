@@ -1,0 +1,6 @@
+name: kalix-demo
+service:
+  telemetry:
+    tracing:
+      enabled: true
+  image: aludwiko/kalix-demo:latest

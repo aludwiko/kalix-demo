@@ -7,7 +7,7 @@ import com.google.protobuf.any.Any;
 import kalix.javasdk.DeferredCall;
 import kalix.javasdk.action.Action;
 import kalix.javasdk.annotations.Subscribe;
-import kalix.spring.KalixClient;
+import kalix.javasdk.client.ComponentClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -16,25 +16,34 @@ public class TransferFunds extends Action {
 
   private final Logger logger = LoggerFactory.getLogger(TransferFunds.class);
 
-  private final KalixClient kalixClient;
+  private final ComponentClient componentClient;
 
-  public TransferFunds(KalixClient kalixClient) {this.kalixClient = kalixClient;}
+  public TransferFunds(ComponentClient componentClient) {this.componentClient = componentClient;}
 
   public Effect<Response> handle(TransferFundsLocked locked) {
-    DeferredCall<Any, Response> transferDeposit = kalixClient.patch("/wallet/" + locked.toWalletId() + "/transfer-deposit/" + locked.walletId() + "/" + locked.amount() + "/" + locked.lockId(), Response.class);
     logger.info("Depositing transfer funds");
+    DeferredCall<Any, Response> transferDeposit = componentClient
+      .forEventSourcedEntity(locked.toWalletId())
+      .call(WalletEntity::transferDeposit)
+      .params(locked.walletId(), locked.amount(), locked.lockId());
     return effects().forward(transferDeposit);
   }
 
   public Effect<Response> handle(TransferRejected rejected) {
-    DeferredCall<Any, Response> abortTransfer = kalixClient.patch("/wallet/" + rejected.fromWalletId() + "/abort/" + rejected.lockId(), Response.class);
     logger.info("Aborting transfer");
+    DeferredCall<Any, Response> abortTransfer = componentClient
+      .forEventSourcedEntity(rejected.fromWalletId())
+      .call(WalletEntity::abort)
+      .params(rejected.lockId());
     return effects().forward(abortTransfer);
   }
 
   public Effect<Response> handle(TransferFundsDeposited transferFundsDeposited) {
-    DeferredCall<Any, Response> confirmTransfer = kalixClient.patch("/wallet/" + transferFundsDeposited.fromWalletId() + "/confirm-deposit/" + transferFundsDeposited.lockId(), Response.class);
     logger.info("Confirming transfer");
+    DeferredCall<Any, Response> confirmTransfer = componentClient
+      .forEventSourcedEntity(transferFundsDeposited.fromWalletId())
+      .call(WalletEntity::confirmDeposit)
+      .params(transferFundsDeposited.lockId());
     return effects().forward(confirmTransfer);
   }
 }

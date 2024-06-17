@@ -2,6 +2,9 @@ package com.example.wallet.domain;
 
 public sealed interface WalletCommand {
 
+  record Create(String id, String ownerId, int initBalance) implements WalletCommand {
+  }
+
   record Deposit(int amount) implements WalletCommand {
   }
 

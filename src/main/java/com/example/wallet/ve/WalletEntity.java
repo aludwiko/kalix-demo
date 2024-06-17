@@ -2,8 +2,10 @@ package com.example.wallet.ve;
 
 import com.example.wallet.application.Response;
 import com.example.wallet.application.Response.Success;
-import kalix.javasdk.annotations.EntityKey;
-import kalix.javasdk.annotations.EntityType;
+import com.example.wallet.domain.Or.Left;
+import com.example.wallet.domain.Or.Right;
+import kalix.javasdk.annotations.Id;
+import kalix.javasdk.annotations.TypeId;
 import kalix.javasdk.valueentity.ValueEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -12,10 +14,10 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 
-@EntityKey("id")
-@EntityType("wallet-ve")
+@Id("id")
+@TypeId("wallet-ve")
 @RequestMapping("/wallet-ve/{id}")
-public class WalletValueEntity extends ValueEntity<WalletVE> {
+public class WalletEntity extends ValueEntity<WalletVE> {
 
   @PostMapping("/{ownerId}/{initBalance}")
   public Effect<Response> create(@PathVariable String id, @PathVariable String ownerId, @PathVariable int initBalance) {
@@ -33,10 +35,11 @@ public class WalletValueEntity extends ValueEntity<WalletVE> {
     if (currentState() == null) {
       return effects().error("wallet not created");
     } else {
-      return currentState().deposit(amount).fold(
-        error -> effects().error(error.name()),
-        updatedWallet -> effects().updateState(updatedWallet).thenReply(Success.of("ok"))
-      );
+      WalletVE walletVE = currentState();
+      return switch (walletVE.deposit(amount)) {
+        case Left(var error) -> effects().error(error.name());
+        case Right(var updatedWallet) -> effects().updateState(updatedWallet).thenReply(Success.of("ok"));
+      };
     }
   }
 
@@ -45,10 +48,10 @@ public class WalletValueEntity extends ValueEntity<WalletVE> {
     if (currentState() == null) {
       return effects().error("wallet not created");
     } else {
-      return currentState().withdraw(amount).fold(
-        error -> effects().error(error.name()),
-        updatedWallet -> effects().updateState(updatedWallet).thenReply(Success.of("ok"))
-      );
+      return switch (currentState().withdraw(amount)) {
+        case Left(var error) -> effects().error(error.name());
+        case Right(var updatedWallet) -> effects().updateState(updatedWallet).thenReply(Success.of("ok"));
+      };
     }
   }
 

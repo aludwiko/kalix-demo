@@ -1,25 +1,19 @@
 package com.example.wallet.application;
 
 import com.example.wallet.application.Response.Success;
+import com.example.wallet.domain.Or;
 import com.example.wallet.domain.Wallet;
 import com.example.wallet.domain.WalletCommand;
 import com.example.wallet.domain.WalletCommand.AbortTransfer;
+import com.example.wallet.domain.WalletCommand.Create;
 import com.example.wallet.domain.WalletCommand.Delete;
 import com.example.wallet.domain.WalletCommand.Deposit;
 import com.example.wallet.domain.WalletCommand.DepositTransferFunds;
 import com.example.wallet.domain.WalletCommand.Withdraw;
 import com.example.wallet.domain.WalletEvent;
-import com.example.wallet.domain.WalletEvent.FundsDeposited;
-import com.example.wallet.domain.WalletEvent.FundsWithdrawn;
-import com.example.wallet.domain.WalletEvent.TransferFundsDeposited;
-import com.example.wallet.domain.WalletEvent.TransferFundsLocked;
-import com.example.wallet.domain.WalletEvent.TransferFundsUnlocked;
-import com.example.wallet.domain.WalletEvent.TransferFundsWithdrawn;
-import com.example.wallet.domain.WalletEvent.WalletCreated;
-import com.example.wallet.domain.WalletEvent.WalletDeleted;
-import kalix.javasdk.annotations.EntityKey;
-import kalix.javasdk.annotations.EntityType;
 import kalix.javasdk.annotations.EventHandler;
+import kalix.javasdk.annotations.Id;
+import kalix.javasdk.annotations.TypeId;
 import kalix.javasdk.eventsourcedentity.EventSourcedEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -28,8 +22,8 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 
-@EntityKey("id")
-@EntityType("wallet")
+@Id("id")
+@TypeId("wallet")
 @RequestMapping("/wallet/{id}")
 public class WalletEntity extends EventSourcedEntity<Wallet, WalletEvent> {
 
@@ -43,9 +37,7 @@ public class WalletEntity extends EventSourcedEntity<Wallet, WalletEvent> {
     if (!currentState().isEmpty()) {
       return effects().error("wallet already created");
     } else {
-      return effects()
-        .emitEvent(new WalletCreated(id, ownerId, initBalance))
-        .thenReply(__ -> Success.of("wallet created"));
+      return process(new Create(id, ownerId, initBalance));
     }
   }
 
@@ -54,10 +46,7 @@ public class WalletEntity extends EventSourcedEntity<Wallet, WalletEvent> {
     if (currentState().isEmpty()) {
       return effects().error("wallet not created");
     } else {
-      return currentState().process(new Deposit(amount)).fold(
-        error -> effects().error(error.name()),
-        event -> effects().emitEvent(event).thenReply(__ -> Success.of("ok"))
-      );
+      return process(new Deposit(amount));
     }
   }
 
@@ -66,10 +55,7 @@ public class WalletEntity extends EventSourcedEntity<Wallet, WalletEvent> {
     if (currentState().isEmpty()) {
       return effects().error("wallet not created");
     } else {
-      return currentState().process(new Withdraw(amount)).fold(
-        error -> effects().error(error.name()),
-        event -> effects().emitEvent(event).thenReply(__ -> Success.of("ok"))
-      );
+      return process(new Withdraw(amount));
     }
   }
 
@@ -78,22 +64,16 @@ public class WalletEntity extends EventSourcedEntity<Wallet, WalletEvent> {
     if (currentState().isEmpty()) {
       return effects().error("wallet not created");
     } else {
-      return currentState().process(new WalletCommand.TransferFunds(amount, toWalletId)).fold(
-        error -> effects().error(error.name()),
-        event -> effects().emitEvent(event).thenReply(__ -> Success.of("ok"))
-      );
+      return process(new WalletCommand.TransferFunds(amount, toWalletId));
     }
   }
 
   @PatchMapping("/abort/{lockId}")
-  public Effect<Response> transfer(@PathVariable String lockId) {
+  public Effect<Response> abort(@PathVariable String lockId) {
     if (currentState().isEmpty()) {
       return effects().error("wallet not created");
     } else {
-      return currentState().process(new AbortTransfer(lockId)).fold(
-        error -> effects().error(error.name()),
-        event -> effects().emitEvent(event).thenReply(__ -> Success.of("ok"))
-      );
+      return process(new AbortTransfer(lockId));
     }
   }
 
@@ -102,10 +82,7 @@ public class WalletEntity extends EventSourcedEntity<Wallet, WalletEvent> {
     if (currentState().isEmpty()) {
       return effects().error("wallet not created");
     } else {
-      return currentState().process(new DepositTransferFunds(amount, fromWalletId, lockId)).fold(
-        error -> effects().error(error.name()),
-        event -> effects().emitEvent(event).thenReply(__ -> Success.of("ok"))
-      );
+      return process(new DepositTransferFunds(amount, fromWalletId, lockId));
     }
   }
 
@@ -114,11 +91,15 @@ public class WalletEntity extends EventSourcedEntity<Wallet, WalletEvent> {
     if (currentState().isEmpty()) {
       return effects().error("wallet not created");
     } else {
-      return currentState().process(new WalletCommand.ConfirmTransferDeposit(lockId)).fold(
-        error -> effects().error(error.name()),
-        event -> effects().emitEvent(event).thenReply(__ -> Success.of("ok"))
-      );
+      return process(new WalletCommand.ConfirmTransferDeposit(lockId));
     }
+  }
+
+  private Effect<Response> process(WalletCommand walletCommand) {
+    return switch (currentState().process(walletCommand)) {
+      case Or.Left(var error) -> effects().error(error.name());
+      case Or.Right(var event) -> effects().emitEvent(event).thenReply(__ -> Success.of("ok"));
+    };
   }
 
   @GetMapping
@@ -135,55 +116,12 @@ public class WalletEntity extends EventSourcedEntity<Wallet, WalletEvent> {
     if (currentState().isEmpty()) {
       return effects().error("wallet not created");
     } else {
-      return currentState().process(new Delete()).fold(
-        error -> effects().error(error.name()),
-        event -> effects().emitEvent(event).thenReply(__ -> Success.of("ok"))
-      );
+      return process(new Delete());
     }
   }
 
   @EventHandler
-  public Wallet handle(WalletCreated walletCreated) {
-    return currentState().apply(walletCreated);
-  }
-
-  @EventHandler
-  public Wallet handle(FundsDeposited fundsDeposited) {
-    return currentState().apply(fundsDeposited);
-  }
-
-  @EventHandler
-  public Wallet handle(FundsWithdrawn fundsWithdrawn) {
-    return currentState().apply(fundsWithdrawn);
-  }
-
-  @EventHandler
-  public Wallet handle(WalletDeleted walletDeleted) {
-    return currentState().apply(walletDeleted);
-  }
-
-  @EventHandler
-  public Wallet handle(TransferFundsLocked transferFundsLocked) {
-    return currentState().apply(transferFundsLocked);
-  }
-
-  @EventHandler
-  public Wallet handle(TransferFundsDeposited transferFundsDeposited) {
-    return currentState().apply(transferFundsDeposited);
-  }
-
-  @EventHandler
-  public Wallet handle(TransferFundsWithdrawn transferFundsWithdrawn) {
-    return currentState().apply(transferFundsWithdrawn);
-  }
-
-  @EventHandler
-  public Wallet handle(TransferFundsUnlocked transferFundsUnlocked) {
-    return currentState().apply(transferFundsUnlocked);
-  }
-
-  @EventHandler
-  public Wallet handle(WalletEvent.TransferRejected transferRejected) {
-    return currentState().apply(transferRejected);
+  public Wallet handle(WalletEvent walletEvent) {
+    return currentState().apply(walletEvent);
   }
 }

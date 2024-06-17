@@ -3,7 +3,9 @@
 ## Designing
 
 To understand the Kalix concepts that are the basis for this example,
-see [Designing services](https://docs.kalix.io/java/development-process.html) in the documentation.
+see [Designing services](https://docs.kalix.io/java/development-process.html) in the documentation. Keep in mind that this sample implements
+two Saga Patter solutions for transferring funds between wallets: choreography and orchestration. Some code is redundant if we select one of
+the solutions.
 
 ## Developing
 
@@ -33,50 +35,63 @@ mvn kalix:runAll
 This command will start your Kalix application and a Kalix Proxy using the included [docker-compose.yml](.
 /docker-compose.yml) file.
 
+To start the applications locally with the console run:
+
+```shell
+kalix local run
+```
+
+and go to `http://localhost:3000/` to see the service and available components.
+
 ## Exercising the service
 
 - Export app url
 
 ```shell
-#export KALIX_DEMO_URL=https://sparkling-butterfly-3388.us-east1.kalix.app
-#export KALIX_DEMO_URL=https://holy-dawn-5129.us-east1.kalix.app
+#export KALIX_DEMO_URL=https://solitary-paper-3969.eu-central-1.kalix.app
 export KALIX_DEMO_URL=localhost:9000
 ```
 
 - Create wallet
 
 ```shell
-curl -XPOST $KALIX_DEMO_URL/wallet/w1/o1/100 
+curl -i $KALIX_DEMO_URL/hello/andrzej 
+```
+
+- Create wallet
+
+```shell
+curl -XPOST $KALIX_DEMO_URL/wallet/wallet1/owner1/100 
 ```
 
 - Create wallet public api
 
 ```shell
-curl -XPOST $KALIX_DEMO_URL/public/wallet/w2/o2/100 
+curl -XPOST $KALIX_DEMO_URL/public/wallet/wallet2/owner2/100 
 ```
 
 - Deposit funds
 
 ```shell
-curl -XPATCH $KALIX_DEMO_URL/wallet/w1/deposit/50 
+curl -XPATCH $KALIX_DEMO_URL/wallet/wallet1/deposit/50 
 ```
 
 - Withdraw funds
 
 ```shell
-curl -XPATCH $KALIX_DEMO_URL/wallet/w1/withdraw/20 
+curl -XPATCH $KALIX_DEMO_URL/wallet/wallet1/withdraw/20 
 ```
 
 - Get wallet
 
 ```shell
-curl $KALIX_DEMO_URL/wallet/w1 
+curl $KALIX_DEMO_URL/wallet/wallet1 
 ```
 
 - Delete wallet
 
 ```shell
-curl -XDELETE $KALIX_DEMO_URL/wallet/w1 
+curl -XDELETE $KALIX_DEMO_URL/wallet/wallet1 
 ```
 
 - Find with balance below 200
@@ -88,25 +103,25 @@ curl $KALIX_DEMO_URL/wallet/by-balance-below/200
 - Find with by owner
 
 ```shell
-curl $KALIX_DEMO_URL/wallet/by-owner/o1 
+curl $KALIX_DEMO_URL/wallet/by-owner/owner1 
 ```
 
 - Transfer funds - choreography
 
 ```shell
-curl -XPATCH $KALIX_DEMO_URL/wallet/w1/transfer/w2/20 
+curl -XPATCH $KALIX_DEMO_URL/wallet/wallet1/transfer/wallet2/20 
 ```
 
 - Transfer funds - orchestration (Workflow Entity)
 
 ```shell
-curl -XPOST $KALIX_DEMO_URL/transfer/t1/w1/w2/20 
+curl -XPOST $KALIX_DEMO_URL/transfer/transfer1/wallet1/wallet2/20 
 ```
 
 - Get transfer state
 
 ```shell
-curl  $KALIX_DEMO_URL/transfer/t1
+curl  $KALIX_DEMO_URL/transfer/transfer1
 ```
 
 ## Deploying the service

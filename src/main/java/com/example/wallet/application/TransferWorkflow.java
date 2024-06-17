@@ -3,11 +3,11 @@ package com.example.wallet.application;
 import com.example.wallet.application.Response.Failure;
 import com.example.wallet.application.Response.Success;
 import com.example.wallet.domain.TransferState;
-import kalix.javasdk.annotations.EntityKey;
-import kalix.javasdk.annotations.EntityType;
-import kalix.javasdk.workflowentity.WorkflowEntity;
-import kalix.javasdk.workflowentity.WorkflowEntity.Effect.TransitionalEffect;
-import kalix.spring.KalixClient;
+import kalix.javasdk.annotations.Id;
+import kalix.javasdk.annotations.TypeId;
+import kalix.javasdk.client.ComponentClient;
+import kalix.javasdk.workflow.AbstractWorkflow.Effect.TransitionalEffect;
+import kalix.javasdk.workflow.Workflow;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -16,12 +16,11 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 
 import static com.example.wallet.domain.TransferStatus.STARTED;
-import static kalix.javasdk.workflowentity.WorkflowEntity.RecoverStrategy.maxRetries;
 
-@EntityKey("id")
-@EntityType("transfer")
+@Id("id")
+@TypeId("transfer")
 @RequestMapping("/transfer/{id}")
-public class TransferWorkflow extends WorkflowEntity<TransferState> {
+public class TransferWorkflow extends Workflow<TransferState> {
 
   private final Logger logger = LoggerFactory.getLogger(TransferWorkflow.class);
 
@@ -29,20 +28,23 @@ public class TransferWorkflow extends WorkflowEntity<TransferState> {
   private final String depositStepName = "deposit";
   private final String abortStepName = "abort";
 
-  final private KalixClient kalixClient;
+  final private ComponentClient componentClient;
 
-  public TransferWorkflow(KalixClient kalixClient) {
-    this.kalixClient = kalixClient;
+  public TransferWorkflow(ComponentClient componentClient) {
+    this.componentClient = componentClient;
   }
 
   @Override
-  public Workflow<TransferState> definition() {
+  public WorkflowDef<TransferState> definition() {
 
     var withdraw =
       step(withdrawStepName)
         .call(() -> {
           TransferState transferState = currentState();
-          return kalixClient.patch("/wallet/" + transferState.fromWalletId() + "/withdraw/" + transferState.amount(), Response.class);
+          return componentClient.forEventSourcedEntity(transferState.fromWalletId())
+            .call(WalletEntity::withdraw)
+            .params(transferState.amount());
+
         })
         .andThen(Response.class, this::moveToDeposit);
 
@@ -50,16 +52,20 @@ public class TransferWorkflow extends WorkflowEntity<TransferState> {
       step(depositStepName)
         .call(() -> {
           TransferState transferState = currentState();
-          return kalixClient.patch("/wallet/" + transferState.toWalletId() + "/deposit/" + transferState.amount(), Success.class);
+          return componentClient.forEventSourcedEntity(transferState.toWalletId())
+            .call(WalletEntity::deposit)
+            .params(transferState.amount());
         })
-        .andThen(Success.class, this::completeTransfer);
+        .andThen(Response.class, this::completeTransfer);
 
     var abort =
       step(abortStepName)
         .call(String.class, message -> {
           TransferState transferState = currentState();
           logger.info("compensating withdraw from walletId=" + transferState.fromWalletId());
-          return kalixClient.patch("/wallet/" + transferState.fromWalletId() + "/deposit/" + transferState.amount(), Response.class);
+          return componentClient.forEventSourcedEntity(transferState.fromWalletId())
+            .call(WalletEntity::deposit)
+            .params(transferState.amount());
         })
         .andThen(Response.class, r -> effects().updateState(currentState().asAborted()).end());
 
@@ -111,11 +117,16 @@ public class TransferWorkflow extends WorkflowEntity<TransferState> {
     };
   }
 
-  private TransitionalEffect<Void> completeTransfer(Success response) {
-    TransferState updatedTransfer = currentState().asCompleted();
-    logger.info("transfer completed: {}", updatedTransfer);
-    return effects()
-      .updateState(updatedTransfer)
-      .end();
+  private TransitionalEffect<Void> completeTransfer(Response response) {
+    return switch (response) {
+      case Success __ -> {
+        TransferState updatedTransfer = currentState().asCompleted();
+        logger.info("transfer completed: {}", updatedTransfer);
+        yield effects()
+          .updateState(updatedTransfer)
+          .end();
+      }
+      case Failure __ -> throw new IllegalStateException("unexpected failure for deposit");
+    };
   }
 }

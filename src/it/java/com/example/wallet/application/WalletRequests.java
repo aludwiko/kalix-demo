@@ -29,7 +29,7 @@ public class WalletRequests {
       .bodyToMono(Response.Success.class)
       .block(timeout);
 
-    assertThat(response.message()).isEqualTo("wallet created");
+    assertThat(response.message()).isEqualTo("ok");
   }
 
   public void depositFunds(String walletId, int amount) {
